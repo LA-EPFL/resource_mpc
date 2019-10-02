@@ -95,6 +95,8 @@ void Plant::read_power()
 
         double power = static_cast<double>(temp);
         std::cout << "plant_node: current power consumption: " << power << " Watts \n";
+
+        usleep(10 * 1000);
     }
 }
 
