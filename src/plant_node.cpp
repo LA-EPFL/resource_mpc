@@ -73,6 +73,9 @@ Plant::Plant(const ros::NodeHandle &_nh)
         exit(2);
     }
 
+    /** start power reading thread */
+    pwr_thread = std::thread(&Plant::pwr_thread, this);
+
 }
 
 void Plant::read_power()
