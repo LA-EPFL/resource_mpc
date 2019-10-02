@@ -1,0 +1,4 @@
+[submodule "3rd_party/polympc"]
+	path = 3rd_party/polympc
+	url = https://github.com/LA-EPFL/polympc
+	branch = resource_mpc
