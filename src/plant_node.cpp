@@ -63,6 +63,12 @@ Plant::Plant(const ros::NodeHandle &_nh)
     else
         std::cout << "plant_node: successfully opened socket at: " << ip_address << " : " << port << "\n";
 
+    if((he = gethostbyname(ip_address.c_str())) == NULL)
+    {
+        std::cerr << "plant_node: could not get host by name \n";
+        exit(1);
+    }
+
     pwr_addr.sin_family = AF_INET;
     pwr_addr.sin_port = htons(port);
     pwr_addr.sin_addr = *((struct in_addr *)he->h_addr);
@@ -71,6 +77,9 @@ Plant::Plant(const ros::NodeHandle &_nh)
     {
         std::cerr << "plant_node: power socket failed to bind \n";
         exit(2);
+    } else
+    {
+        std::cout << "plant_node: successfully binded to " << ip_address << " : " << port << "\n";
     }
 
     /** start power reading thread */
