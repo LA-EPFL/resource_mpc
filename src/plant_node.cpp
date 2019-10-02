@@ -52,8 +52,8 @@ Plant::Plant(const ros::NodeHandle &_nh)
     pub = nh->advertise<resource_mpc::rmpc_state>("/rmpc_state", 100);
 
     /** initialise UDP port */
-    ip_address = "127.0.0.1";
-    port = 5555;
+    ip_address = "128.178.5.101";
+    port = 65001;
 
     if(pwr_socket = socket(AF_INET, SOCK_DGRAM, 0) == -1)
     {
@@ -89,7 +89,7 @@ Plant::Plant(const ros::NodeHandle &_nh)
 
 void Plant::read_power()
 {
-    double temp;
+    double temp[4];
     addr_len = sizeof(temp);
 
     while(true)
@@ -105,8 +105,8 @@ void Plant::read_power()
             std::cout << "plant_node: received " << numbytes << " bytes length: " << addr_len << "\n";
         }
 
-        double power = static_cast<double>(temp);
-        std::cout << "plant_node: current power consumption: " << power << " Watts \n";
+        //double power = static_cast<double>(temp);
+        //std::cout << "plant_node: current power consumption: " << power << " Watts \n";
 
         usleep(10 * 1000);
     }
