@@ -13,6 +13,8 @@
 
 using namespace casadi;
 
+#define PORT 65001
+
 class Plant
 {
 public:
@@ -31,7 +33,7 @@ private:
     ros::Publisher pub;
 
     std::string ip_address;
-    uint port;
+    uint32_t port;
     int pwr_socket;
     struct sockaddr_in pwr_addr;
     struct hostent *he;
@@ -52,10 +54,10 @@ Plant::Plant(const ros::NodeHandle &_nh)
     pub = nh->advertise<resource_mpc::rmpc_state>("/rmpc_state", 100);
 
     /** initialise UDP port */
-    ip_address = "128.178.5.101";
-    port = 65001;
+    ip_address = "128.178.5.107";
+    port = 65002;
 
-    if(pwr_socket = socket(AF_INET, SOCK_DGRAM, 0) == -1)
+    if(pwr_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP) == -1)
     {
         std::cerr << "plant_node: failed to open power date socket \n";
         exit(2);
@@ -69,9 +71,12 @@ Plant::Plant(const ros::NodeHandle &_nh)
         exit(1);
     }
 
+    memset((char *)&pwr_addr, 0, sizeof(pwr_addr));
+
     pwr_addr.sin_family = AF_INET;
-    pwr_addr.sin_port = htons(port);
-    pwr_addr.sin_addr = *((struct in_addr *)he->h_addr);
+    pwr_addr.sin_port = htons(PORT);
+    pwr_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    //pwr_addr.sin_addr = *((struct in_addr *)he->h_addr);
 
     if( ::bind(pwr_socket, (struct sockaddr *)&pwr_addr, sizeof(pwr_addr)) < 0 )
     {
@@ -83,8 +88,7 @@ Plant::Plant(const ros::NodeHandle &_nh)
     }
 
     /** start power reading thread */
-    pwr_thread = std::thread(&Plant::pwr_thread, this);
-
+    pwr_thread = std::thread(&Plant::read_power, this);
 }
 
 void Plant::read_power()
