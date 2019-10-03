@@ -19,7 +19,12 @@ class Plant
 {
 public:
     Plant(const ros::NodeHandle &_nh);
-    ~Plant(){if(pwr_thread.joinable()) pwr_thread.join();}
+    Plant(){};
+    ~Plant()
+    {
+        if(pwr_thread.joinable()) pwr_thread.join();
+        close(pwr_socket);
+    }
 
     DM state;
     DM control;
@@ -54,31 +59,44 @@ Plant::Plant(const ros::NodeHandle &_nh)
     pub = nh->advertise<resource_mpc::rmpc_state>("/rmpc_state", 100);
 
     /** initialise UDP port */
-    ip_address = "128.178.5.107";
+    ip_address = "127.0.0.1";
     port = 65002;
 
-    if(pwr_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP) == -1)
+    if((pwr_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
     {
         std::cerr << "plant_node: failed to open power date socket \n";
         exit(2);
     }
     else
-        std::cout << "plant_node: successfully opened socket at: " << ip_address << " : " << port << "\n";
+        std::cout << "plant_node: successfully opened socket \n";
 
     if((he = gethostbyname(ip_address.c_str())) == NULL)
     {
         std::cerr << "plant_node: could not get host by name \n";
         exit(1);
+    } else
+    {
+        std::cout << "Got host by name: " << ip_address << " : type:  " << he->h_addrtype << "\n";
     }
 
     memset((char *)&pwr_addr, 0, sizeof(pwr_addr));
 
     pwr_addr.sin_family = AF_INET;
     pwr_addr.sin_port = htons(PORT);
-    pwr_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    pwr_addr.sin_addr.s_addr = INADDR_ANY;
     //pwr_addr.sin_addr = *((struct in_addr *)he->h_addr);
 
-    if( ::bind(pwr_socket, (struct sockaddr *)&pwr_addr, sizeof(pwr_addr)) < 0 )
+    //int broadcast = 1;
+    //setsockopt(pwr_socket, SOL_SOCKET, SO_BROADCAST, &broadcast, sizeof(broadcast));
+
+    struct timeval timeout;
+    timeout.tv_sec = 1;
+    timeout.tv_usec = 0;
+
+    if (setsockopt (pwr_socket, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0)
+        std::cerr << "setsockopt failed \n";
+
+    if( ::bind(pwr_socket, (struct sockaddr *)&pwr_addr, sizeof(pwr_addr)) == -1 )
     {
         std::cerr << "plant_node: power socket failed to bind \n";
         exit(2);
@@ -86,6 +104,7 @@ Plant::Plant(const ros::NodeHandle &_nh)
     {
         std::cout << "plant_node: successfully binded to " << ip_address << " : " << port << "\n";
     }
+
 
     /** start power reading thread */
     pwr_thread = std::thread(&Plant::read_power, this);
@@ -96,13 +115,15 @@ void Plant::read_power()
     double temp[4];
     addr_len = sizeof(temp);
 
-    while(true)
+    std::cout << "Started power reading thread \n";
+
+    while(ros::ok())
     {
         int numbytes = 0;
         if( numbytes = recvfrom(pwr_socket, (void*)&temp, sizeof(temp), 0, (struct sockaddr *)&pwr_addr, &addr_len) == -1)
         {
-            std::cerr << "plant_node: failed to receive from the poewr device \n";
-            exit(1);
+            std::cerr << "plant_node: failed to receive power measurements \n";
+            //exit(1);
         }
         else
         {
@@ -123,7 +144,8 @@ int main(int argc, char **argv)
 
     Plant plant(n);
 
-    while(true)
+
+    while(ros::ok())
     {
         std::cout << "plant mode is running \n";
         usleep(100 * 1000);
