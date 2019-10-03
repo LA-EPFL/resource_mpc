@@ -34,12 +34,12 @@ public:
     DM control;
     DM get_state(){return state;}
 
-    DM solve();
-    DM publish();
+    void solve();
+    void publish();
 
 private:
     void read_power();
-    void control_callback(const resource_mpc::rmpc_control::ConstPtr &msg){}
+    void control_callback(const resource_mpc::rmpc_control::ConstPtr &msg);
 
     std::shared_ptr<ODESolver> model;
 
@@ -120,7 +120,7 @@ Plant::Plant(const ros::NodeHandle &_nh)
 
     /** initialise plant model */
     state = DM(std::vector<double>{0,0,0.5});
-    control = DM(std::vector<double>{0.0,0.0,0.0});
+    control = DM(std::vector<double>{0.0,0.0,0.25});
 
     Dict solver_options;
     solver_options["tf"]     = 0.02;
@@ -130,6 +130,32 @@ Plant::Plant(const ros::NodeHandle &_nh)
     System double_integrator;
     Function sys = double_integrator.getDynamics();
     model = std::make_shared<ODESolver>(sys, solver_options);
+}
+
+void Plant::solve()
+{
+    state = model->solve(state, control, 0.02);
+}
+
+void Plant::publish()
+{
+    resource_mpc::rmpc_state msg;
+    std::vector<double> state_vec = state.nonzeros();
+    msg.header.stamp = ros::Time::now();
+    msg.x1 = state_vec[0];
+    msg.x2 = state_vec[1];
+    msg.e  = state_vec[2];
+    msg.ref_y = 1.0;
+
+    msg.power = current_power;
+    pub.publish(msg);
+}
+
+void Plant::control_callback(const resource_mpc::rmpc_control::ConstPtr &msg)
+{
+    control(0) = msg->u;
+    control(1) = msg->D;
+    control(2) = msg->v;
 }
 
 void Plant::read_power()
@@ -172,11 +198,17 @@ int main(int argc, char **argv)
 
     Plant plant(n);
 
+    ros::Rate rate(10);
 
     while(ros::ok())
     {
-        std::cout << "plant mode is running \n";
-        usleep(100 * 1000);
+        ros::spinOnce();
+
+        std::cout << "plant model is running \n";
+        plant.solve();
+        plant.publish();
+
+        rate.sleep();
     }
 
     return 0;
