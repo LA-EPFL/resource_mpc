@@ -84,7 +84,7 @@ include_directories(
 # add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 add_executable(rmpc_plant_node src/plant_node.cpp)
-add_executable(udp_rcv src/udp_rcv.c)
+#add_executable(udp_rcv src/udp_rcv.c)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the

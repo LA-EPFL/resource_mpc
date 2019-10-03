@@ -13,7 +13,9 @@
 
 using namespace casadi;
 
-#define PORT 65001
+#define PORT 65002
+
+
 
 class Plant
 {
@@ -86,15 +88,15 @@ Plant::Plant(const ros::NodeHandle &_nh)
     pwr_addr.sin_addr.s_addr = INADDR_ANY;
     //pwr_addr.sin_addr = *((struct in_addr *)he->h_addr);
 
-    //int broadcast = 1;
-    //setsockopt(pwr_socket, SOL_SOCKET, SO_BROADCAST, &broadcast, sizeof(broadcast));
+    int broadcast = 1;
+    setsockopt(pwr_socket, SOL_SOCKET, SO_BROADCAST, &broadcast, sizeof(broadcast));
 
     struct timeval timeout;
     timeout.tv_sec = 1;
     timeout.tv_usec = 0;
 
-    if (setsockopt (pwr_socket, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0)
-        std::cerr << "setsockopt failed \n";
+    //if (setsockopt (pwr_socket, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0)
+    //    std::cerr << "setsockopt failed \n";
 
     if( ::bind(pwr_socket, (struct sockaddr *)&pwr_addr, sizeof(pwr_addr)) == -1 )
     {
@@ -112,15 +114,16 @@ Plant::Plant(const ros::NodeHandle &_nh)
 
 void Plant::read_power()
 {
+    //char temp[32];
     double temp[4];
-    addr_len = sizeof(temp);
+    addr_len = sizeof(pwr_addr);
 
     std::cout << "Started power reading thread \n";
 
     while(ros::ok())
     {
         int numbytes = 0;
-        if( numbytes = recvfrom(pwr_socket, (void*)&temp, sizeof(temp), 0, (struct sockaddr *)&pwr_addr, &addr_len) == -1)
+        if( (numbytes = recvfrom(pwr_socket, (void*)&temp, sizeof(temp), 0, (struct sockaddr *)&pwr_addr, &addr_len)) == -1)
         {
             std::cerr << "plant_node: failed to receive power measurements \n";
             //exit(1);
@@ -131,7 +134,11 @@ void Plant::read_power()
         }
 
         //double power = static_cast<double>(temp);
-        //std::cout << "plant_node: current power consumption: " << power << " Watts \n";
+        // 1 - ID
+        // 2 - Time
+        // 3 - Voltage
+        // 4 - Current
+        std::cout << temp[2] << " Watts \n";
 
         usleep(10 * 1000);
     }
