@@ -82,6 +82,7 @@ include_directories(
 # add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 add_executable(rmpc_plant_node src/plant_node.cpp)
+add_executable(rmpc_controller_node src/controller_node.cpp)
 #add_executable(udp_rcv src/udp_rcv.c)
 
 ## Rename C++ executable without prefix
@@ -94,6 +95,7 @@ add_executable(rmpc_plant_node src/plant_node.cpp)
 ## same as for the library above
 # add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(rmpc_plant_node resource_mpc_generate_messages_cpp)
+add_dependencies(rmpc_controller_node resource_mpc_generate_messages_cpp)
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(rmpc_plant_node
@@ -102,6 +104,12 @@ target_link_libraries(rmpc_plant_node
    ${CASADI_LIBRARIES}
    Eigen3::Eigen
    )
+
+target_link_libraries(rmpc_controller_node
+        ${catkin_LIBRARIES}
+        ${CASADI_LIBRARIES}
+        Eigen3::Eigen
+        )
 
 #############
 ## Install ##
