@@ -99,6 +99,7 @@ add_dependencies(rmpc_plant_node resource_mpc_generate_messages_cpp)
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(rmpc_plant_node
+   odesolver
    ${catkin_LIBRARIES}
    ${CASADI_LIBRARIES}
    Eigen3::Eigen

@@ -2,6 +2,7 @@
 #include "resource_mpc/plant_model.hpp"
 #include "resource_mpc/rmpc_state.h"
 #include "resource_mpc/rmpc_control.h"
+
 #include <memory>
 #include <thread>
 #include <mutex>
@@ -11,11 +12,12 @@
 #include <sys/socket.h>
 #include <sys/wait.h>
 
+#include "integrator.h"
+#include "resource_mpc/plant_model.hpp"
+
 using namespace casadi;
 
 #define PORT 65002
-
-
 
 class Plant
 {
@@ -30,10 +32,16 @@ public:
 
     DM state;
     DM control;
+    DM get_state(){return state;}
+
+    DM solve();
+    DM publish();
 
 private:
     void read_power();
     void control_callback(const resource_mpc::rmpc_control::ConstPtr &msg){}
+
+    std::shared_ptr<ODESolver> model;
 
     std::shared_ptr<ros::NodeHandle> nh;
     ros::Subscriber sub;
@@ -95,8 +103,8 @@ Plant::Plant(const ros::NodeHandle &_nh)
     timeout.tv_sec = 1;
     timeout.tv_usec = 0;
 
-    //if (setsockopt (pwr_socket, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0)
-    //    std::cerr << "setsockopt failed \n";
+    if (setsockopt (pwr_socket, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0)
+        std::cerr << "setsockopt failed \n";
 
     if( ::bind(pwr_socket, (struct sockaddr *)&pwr_addr, sizeof(pwr_addr)) == -1 )
     {
@@ -107,9 +115,21 @@ Plant::Plant(const ros::NodeHandle &_nh)
         std::cout << "plant_node: successfully binded to " << ip_address << " : " << port << "\n";
     }
 
-
     /** start power reading thread */
     pwr_thread = std::thread(&Plant::read_power, this);
+
+    /** initialise plant model */
+    state = DM(std::vector<double>{0,0,0.5});
+    control = DM(std::vector<double>{0.0,0.0,0.0});
+
+    Dict solver_options;
+    solver_options["tf"]     = 0.02;
+    solver_options["tol"]    = 1e-4;
+    solver_options["method"] = IntType::CVODES;
+
+    System double_integrator;
+    Function sys = double_integrator.getDynamics();
+    model = std::make_shared<ODESolver>(sys, solver_options);
 }
 
 void Plant::read_power()
@@ -138,7 +158,8 @@ void Plant::read_power()
         // 2 - Time
         // 3 - Voltage
         // 4 - Current
-        std::cout << temp[2] << " Watts \n";
+        //std::cout << temp[2] * temp[3] << " Watts \n";
+        current_power = temp[2] * temp[3];
 
         usleep(10 * 1000);
     }
