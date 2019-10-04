@@ -198,7 +198,7 @@ int main(int argc, char **argv)
 
     Plant plant(n);
 
-    ros::Rate rate(10);
+    ros::Rate rate(50);
 
     while(ros::ok())
     {
