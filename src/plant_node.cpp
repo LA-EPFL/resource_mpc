@@ -15,6 +15,12 @@
 #include "integrator.h"
 #include "resource_mpc/plant_model.hpp"
 
+template <typename T>
+int sgn(T val)
+{
+    return (T(0) < val) - (val < T(0));
+}
+
 using namespace casadi;
 
 #define PORT 65002
@@ -33,6 +39,7 @@ public:
     DM state;
     DM control;
     DM get_state(){return state;}
+    double reference;
 
     void solve();
     void publish();
@@ -130,6 +137,7 @@ Plant::Plant(const ros::NodeHandle &_nh)
     System double_integrator;
     Function sys = double_integrator.getDynamics();
     model = std::make_shared<ODESolver>(sys, solver_options);
+    reference = 1.0;
 }
 
 void Plant::solve()
@@ -145,7 +153,7 @@ void Plant::publish()
     msg.x1 = state_vec[0];
     msg.x2 = state_vec[1];
     msg.e  = state_vec[2];
-    msg.ref_y = 1.0;
+    msg.ref_y = reference;
 
     msg.power = current_power;
     pub.publish(msg);
@@ -174,10 +182,10 @@ void Plant::read_power()
             std::cerr << "plant_node: failed to receive power measurements \n";
             //exit(1);
         }
-        else
-        {
-            std::cout << "plant_node: received " << numbytes << " bytes length: " << addr_len << "\n";
-        }
+        //else
+        //{
+        //    std::cout << "plant_node: received " << numbytes << " bytes length: " << addr_len << "\n";
+        //}
 
         //double power = static_cast<double>(temp);
         // 1 - ID
@@ -187,6 +195,7 @@ void Plant::read_power()
         //std::cout << temp[2] * temp[3] << " Watts \n";
         current_power = temp[2] * temp[3];
 
+        /** work at 100 Hz */
         usleep(10 * 1000);
     }
 }
@@ -200,6 +209,7 @@ int main(int argc, char **argv)
 
     ros::Rate rate(50);
 
+    double sim_start = ros::Time::now().toSec();
     while(ros::ok())
     {
         ros::spinOnce();
@@ -207,6 +217,10 @@ int main(int argc, char **argv)
         std::cout << "plant model is running \n";
         plant.solve();
         plant.publish();
+
+        /** update the reference */
+        double t = ros::Time::now().toSec();
+        plant.reference = sgn<double>(sin(1 * (t - sim_start)));
 
         rate.sleep();
     }

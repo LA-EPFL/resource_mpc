@@ -49,6 +49,8 @@ void Controller::estimator_callback(const resource_mpc::rmpc_state::ConstPtr &ms
     state(1) = msg->x2;
     state(2) = msg->e;
 
+    mpc->setReference(DM(msg->ref_y));
+
     if(!m_initialised)
         m_initialised = true;
 }
@@ -112,6 +114,14 @@ void Controller::compute_control()
     control = opt_ctl(Slice(0,3), opt_ctl.size2() - 1);
 }
 
+void c_sleep(const double &milliseconds)
+{
+    if(milliseconds > 0.0)
+        usleep(milliseconds * 1000);
+    else
+        return;
+}
+
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "rmpc_controller_node");
@@ -125,8 +135,11 @@ int main(int argc, char **argv)
         ros::spinOnce();
         if(controller.initialised())
         {
+            double start = ros::Time::now().toSec();
             controller.compute_control();
+            double finish = ros::Time::now().toSec();
             controller.publish();
+            std::cout << "Controller computation time: " << (finish - start) * 1000 << "\n";
             rate.sleep();
         } else {
             rate.sleep();
