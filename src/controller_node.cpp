@@ -30,6 +30,7 @@ public:
 
     DM control;
     DM state;
+    double D;
 
     bool initialised(){return m_initialised;};
 
@@ -102,6 +103,8 @@ void Controller::publish()
     msg.D  = control_vec[1];
     msg.v  = control_vec[2];
 
+    D = control_vec[1];
+
     pub.publish(msg);
 }
 
@@ -139,8 +142,11 @@ int main(int argc, char **argv)
             controller.compute_control();
             double finish = ros::Time::now().toSec();
             controller.publish();
-            std::cout << "Controller computation time: " << (finish - start) * 1000 << "\n";
-            rate.sleep();
+            double comp_time_ms = (finish - start) * 1000;
+            std::cout << "Controller computation time: " << comp_time_ms << " [ms] \n";
+            c_sleep((controller.D * 0.25)*1000 - comp_time_ms);
+            std::cout << "Controller sleeping for: " << (controller.D * 0.25)*1000 - comp_time_ms << " [ms] \n";
+            //rate.sleep();
         } else {
             rate.sleep();
             std::cout << "Controller is not initialised \n";
