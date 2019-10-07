@@ -32,7 +32,8 @@ public:
     DM state;
     double D;
 
-    bool initialised(){return m_initialised;};
+    bool initialised(){return m_initialised;}
+    Dict get_stats(){return mpc->getStats();}
 
 private:
     std::shared_ptr<ros::NodeHandle> nh;
@@ -141,6 +142,8 @@ int main(int argc, char **argv)
 
     uint counter = 1;
     double cummulative_avg = 0;
+    Dict stats;
+
     while(ros::ok())
     {
         ros::spinOnce();
@@ -152,8 +155,11 @@ int main(int argc, char **argv)
             controller.publish();
             double comp_time_ms = (finish - start) * 1000;
             std::cout << "Controller computation time: " << comp_time_ms << " [ms] \n";
-            cummulative_avg = cummulative_average(cummulative_avg, comp_time_ms, counter);
+            stats = controller.get_stats();
+            double iter_n = stats["iter_count"];
+            cummulative_avg = cummulative_average(cummulative_avg / iter_n, comp_time_ms, counter);
             counter++;
+            std::cout << "Average time per iteration: " << cummulative_avg << " iterations: " << iter_n << "\n";
             //c_sleep((controller.D * 0.25)*1000 - comp_time_ms - 40);
             //std::cout << "Controller sleeping for: " << (controller.D * 0.25)*1000 - comp_time_ms << " [ms] \n";
             //rate.sleep();
