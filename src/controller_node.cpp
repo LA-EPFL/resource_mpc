@@ -125,6 +125,12 @@ void c_sleep(const double &milliseconds)
         return;
 }
 
+/** cumulative average */
+double cummulative_average(const double &avg_n, const double &sample, const int &sample_n)
+{
+    return (sample_n * (avg_n) + sample) / (sample_n + 1);
+}
+
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "rmpc_controller_node");
@@ -133,6 +139,8 @@ int main(int argc, char **argv)
     Controller controller(n);
     ros::Rate rate(20);
 
+    uint counter = 1;
+    double cummulative_avg = 0;
     while(ros::ok())
     {
         ros::spinOnce();
@@ -144,8 +152,10 @@ int main(int argc, char **argv)
             controller.publish();
             double comp_time_ms = (finish - start) * 1000;
             std::cout << "Controller computation time: " << comp_time_ms << " [ms] \n";
-            c_sleep((controller.D * 0.25)*1000 - comp_time_ms - 40);
-            std::cout << "Controller sleeping for: " << (controller.D * 0.25)*1000 - comp_time_ms << " [ms] \n";
+            cummulative_avg = cummulative_average(cummulative_avg, comp_time_ms, counter);
+            counter++;
+            //c_sleep((controller.D * 0.25)*1000 - comp_time_ms - 40);
+            //std::cout << "Controller sleeping for: " << (controller.D * 0.25)*1000 - comp_time_ms << " [ms] \n";
             //rate.sleep();
         } else {
             rate.sleep();
