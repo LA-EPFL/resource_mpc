@@ -144,7 +144,7 @@ int main(int argc, char **argv)
             controller.publish();
             double comp_time_ms = (finish - start) * 1000;
             std::cout << "Controller computation time: " << comp_time_ms << " [ms] \n";
-            c_sleep((controller.D * 0.25)*1000 - comp_time_ms);
+            c_sleep((controller.D * 0.25)*1000 - comp_time_ms - 40);
             std::cout << "Controller sleeping for: " << (controller.D * 0.25)*1000 - comp_time_ms << " [ms] \n";
             //rate.sleep();
         } else {
